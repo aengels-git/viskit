@@ -12,7 +12,7 @@ vis_barplot(
   labels = T,
   digits = 2,
   scaling = function(x) {     return(x) },
-  position = position_stack(),
+  position = ggplot2::position_stack(),
   fontsize = 22,
   legend_title = "",
   labelsize = 3.5
@@ -48,6 +48,11 @@ A ggplot object
 Create a quick and beautiful barplot
 }
 \examples{
+library(ggplot2)
+library(dplyr)
+library(magrittr)
+library(scales)
 tab <- diamonds\%>\%group_by(cut)\%>\%summarise(n=n())
 vis_barplot(tab, x=cut, y=n, fill=cut, scaling=comma)
+
 }

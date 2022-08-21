@@ -14,4 +14,12 @@ Imports:
     ggplot2,
     ggthemes,
     rlang,
-    scales
+    scales,
+    forcats,
+    lubridate,
+    purrr,
+    snakecase,
+    tidyr,
+    tidyselect,
+    viridis,
+    magrittr

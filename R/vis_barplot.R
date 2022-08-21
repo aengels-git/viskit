@@ -17,11 +17,17 @@
 #' @export
 #'
 #' @examples
+#' library(ggplot2)
+#' library(dplyr)
+#' library(magrittr)
+#' library(scales)
 #' tab <- diamonds%>%group_by(cut)%>%summarise(n=n())
 #' vis_barplot(tab, x=cut, y=n, fill=cut, scaling=comma)
+#' 
 vis_barplot<-function(df,x,y,fill=NULL,labels=T,digits=2,
                       scaling=function(x){return(x)},position=ggplot2::position_stack(),
                       fontsize=22,legend_title="",labelsize=3.5){
+  warnings("This function is deprecated. Please use vis_col instead")
   # fill<-ifelse(length(deparse(substitute(fill)))==0,"NULL",as_name(substitute(fill)))  # used to work
   fill<-ifelse(deparse(substitute(fill))=="NULL","NULL",as_name(substitute(fill)))
   gg<-ggplot2::ggplot(df,aes(x=!!enexpr(x),y=!!enexpr(y),fill=!!parse_expr(fill)))+
