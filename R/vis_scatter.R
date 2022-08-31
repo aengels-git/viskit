@@ -1,6 +1,6 @@
-#' @title Bar ggplot.
+#' @title Scatter ggplot.
 #'
-#' @description Create a bar plot with a wrapper around the ggplot2::geom_bar function.
+#' @description Create a scatter plot with a wrapper around the ggplot2::geom_point function.
 #' @param data A data frame or tibble.
 #' @param x Unquoted x aesthetic variable.
 #' @param y Unquoted y aesthetic variable.
@@ -14,7 +14,7 @@
 #' @param pal Colours to use. A character vector of hex codes (or names).
 #' @param pal_na Colour to use for NA values. A character vector of a hex code (or name).
 #' @param alpha Opacity. A number between 0 and 1.
-#' @param width Width. A number 0 upwards.
+#' @param pointsize Size of the points A number 0 upwards.
 #' @param digits Numbers after the decimal point to rount to
 #' @param ... Other arguments passed to the relevant ggplot2::geom_* function.
 #' @param titles A function to format the x, y and col titles, including in rlang lambda format. Defaults to snakecase::to_sentence_case.
@@ -63,34 +63,23 @@
 #' library(ggplot2)
 #' library(dplyr)
 #' library(magrittr)
-#' tab <- diamonds%>%group_by(cut)%>%summarise(n=n())
-#' vis_col(tab, x=cut, y=n, fill=cut,text=n)
-#' 
-#' tab<-diamonds%>%group_by(cut)%>%summarise(n=n())%>%
-#'        mutate(prop=n/sum(n))
-#' vis_col(tab,x = cut,y=prop,text = prop,
-#'         col = cut,y_title = "Percentage",
-#'         y_include = 0.45,y_breaks = scales::breaks_width(0.05),
-#'         y_labels = function(x){scales::percent(x,accuracy = 1)})
-#'
+#' vis_scatter(mtcars,y=mpg ,x=hp,col = factor(cyl),pointsize =2 ,y_include = 0)
 
-
-vis_col <- function(
+vis_scatter <- function(
     data = NULL,
     x = NULL,
     y = NULL,
     col = NULL,
     facet = NULL,
     facet2 = NULL,
-    group = NULL,
     text = NULL,
-    stat = "count",
-    position = "stack",
+    stat = "identity",
+    position = "identity",
     pal = NULL,
     pal_na = "#7F7F7F",
-    alpha = 0.9,
-    #linewidth = 0.5,
-    width = 0.9,
+    alpha = 1,
+    pointsize = 2,
+    #width = 0.9,
     digits = 2,
     ...,
     titles = NULL,
@@ -140,7 +129,6 @@ vis_col <- function(
   col <- rlang::enquo(col)
   facet <- rlang::enquo(facet)
   facet2 <- rlang::enquo(facet2)
-  group <- rlang::enquo(group)
   text <- rlang::enquo(text)
   
   #stop, warn or message
@@ -217,45 +205,10 @@ vis_col <- function(
   FALSE
   )
   
-  # if (rlang::is_null(theme)) {
-  #   # if (xy_numeric_date) {
-  #   #   grid_v <- FALSE
-  #   #   grid_h <- TRUE
-  #   # }
-  #   # else {
-  #   #   grid_v <-
-  #   #     ifelse(is.numeric(rlang::eval_tidy(x, data)) |
-  #   #              lubridate::is.Date(rlang::eval_tidy(x, data)) |
-  #   #              rlang::quo_is_null(x),
-  #   #            TRUE,
-  #   #            FALSE)
-  #   #   grid_h <-
-  #   #     ifelse(is.numeric(rlang::eval_tidy(y, data)) |
-  #   #              lubridate::is.Date(rlang::eval_tidy(y, data)) |
-  #   #              rlang::quo_is_null(y),
-  #   #            TRUE,
-  #   #            FALSE)
-  #   # }
-  #   # 
-  #   # theme <- gg_theme(grid_v = grid_v, grid_h = grid_h)
-  # 
-  # }
   if (rlang::is_null(theme)) {
     theme <- create_theme(fontsize = fontsize)
   }
-  if (rlang::is_null(width)) {
-    if (lubridate::is.Date(rlang::eval_tidy(x, data)) |
-        lubridate::is.Date(rlang::eval_tidy(y, data)) |
-        (rlang::quo_is_null(y) & is.numeric(rlang::eval_tidy(x, data))) |
-        (rlang::quo_is_null(x) & is.numeric(rlang::eval_tidy(y, data))) |
-        (is.numeric(rlang::eval_tidy(x, data)) &
-         is.numeric(rlang::eval_tidy(y, data)))) {
-      width <- NULL
-    }
-    else
-      width <- 0.75
-  }
-  
+
   if (rlang::is_null(coord)) coord <- ggplot2::coord_cartesian(clip = "off")
   
   ###process plot data
@@ -312,7 +265,7 @@ vis_col <- function(
         dplyr::mutate(dplyr::across(!!facet2, ~ factor(.x, levels = c("FALSE", "TRUE"))))
     }
   }
-
+  
   ###make col scale
   if (rlang::quo_is_null(col)) {
     if (rlang::is_null(pal)) pal <-  pal_viridis_mix(1)
@@ -529,6 +482,7 @@ vis_col <- function(
     }
   }
   
+  
   ###make plot
   if (!rlang::quo_is_null(x) & !rlang::quo_is_null(y)) {
     if (!rlang::quo_is_null(col)) {
@@ -536,8 +490,7 @@ vis_col <- function(
         ggplot2::ggplot(mapping = ggplot2::aes(
           x = !!x,
           y = !!y,
-          fill = !!col,
-          group = !!group
+          col = !!col
         ))
     }
     else if (rlang::quo_is_null(col)) {
@@ -545,72 +498,50 @@ vis_col <- function(
         ggplot2::ggplot(mapping = ggplot2::aes(
           x = !!x,
           y = !!y,
-          fill = "",
-          group = !!group
-        ))
-    }
-  } else if (!rlang::quo_is_null(x) & rlang::quo_is_null(y)) {
-    if (!rlang::quo_is_null(col)) {
-      plot <- data %>%
-        ggplot2::ggplot(mapping = ggplot2::aes(
-          x = !!x,
-          fill = !!col,
-          group = !!group
-        ))
-    }
-    else if (rlang::quo_is_null(col)) {
-      plot <- data %>%
-        ggplot2::ggplot(mapping = ggplot2::aes(
-          x = !!x,
-          fill = "",
-          group = !!group
-        ))
-    }
-  } else if (rlang::quo_is_null(x) & !rlang::quo_is_null(y)) {
-    if (!rlang::quo_is_null(col)) {
-      plot <- data %>%
-        ggplot2::ggplot(mapping = ggplot2::aes(
-          y = !!y,
-          fill = !!col,
-          group = !!group
-        ))
-    }
-    else if (rlang::quo_is_null(col)) {
-      plot <- data %>%
-        ggplot2::ggplot(mapping = ggplot2::aes(
-          y = !!y,
-          fill = "",
-          group = !!group
-        ))
-    }
-  } else if (rlang::quo_is_null(x) & rlang::quo_is_null(y)) {
-    if (!rlang::quo_is_null(col)) {
-      plot <- data %>%
-        ggplot2::ggplot(mapping = ggplot2::aes(
-          fill = !!col,
-          group = !!group
-        ))
-    }
-    else if (rlang::quo_is_null(col)) {
-      plot <- data %>%
-        ggplot2::ggplot(mapping = ggplot2::aes(
-          fill = "",
-          group = !!group
+          col = ""
         ))
     }
   }
+  else if (!rlang::quo_is_null(x) & rlang::quo_is_null(y)) {
+    if (!rlang::quo_is_null(col)) {
+      plot <- data %>%
+        ggplot2::ggplot(mapping = ggplot2::aes(
+          x = !!x,
+          col = !!col
+        ))
+    }
+    else if (rlang::quo_is_null(col)) {
+      plot <- data %>%
+        ggplot2::ggplot(mapping = ggplot2::aes(
+          x = !!x,
+          col = ""
+        ))
+    }
+  }
+  else if (rlang::quo_is_null(x) & !rlang::quo_is_null(y)) {
+    plot <- data %>%
+      ggplot2::ggplot(mapping = ggplot2::aes(
+        y = !!y,
+        col = !!col
+      ))
+  }
+  else if (rlang::quo_is_null(x) & rlang::quo_is_null(y)) {
+    plot <- data %>%
+      ggplot2::ggplot(mapping = ggplot2::aes(
+        col = !!col
+      ))
+  }
   
   plot <- plot +
-    ggplot2::geom_col(
+    ggplot2::geom_point(
       ggplot2::aes(text = !!text),
       stat = stat,
       position = position,
       alpha = alpha,
-      #linewidth = linewidth,
-      width = width,
+      size = pointsize,
       ...
     )
-
+  
   
   if (!rlang::quo_is_null(facet)) {
     if (rlang::quo_is_null(facet2)) {
@@ -632,7 +563,7 @@ vis_col <- function(
         )
     }
   }
-
+  
   if (!rlang::is_null(x_include)) {
     plot <- plot +
       ggplot2::expand_limits(x = x_include)
@@ -641,7 +572,7 @@ vis_col <- function(
     plot <- plot +
       ggplot2::expand_limits(y = y_include)
   }
-
+  
   ###Get layer plot
   layer_data <- ggplot2::layer_data(plot)
   
@@ -913,7 +844,7 @@ vis_col <- function(
       caption = caption
     )+
     theme
-
+  
   ###adjust legend
   if (col_legend_place %in% c("b", "t")) {
     plot <- plot +

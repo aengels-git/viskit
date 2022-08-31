@@ -27,7 +27,7 @@ library(viskit)
 tab<-diamonds%>%group_by(cut)%>%summarise(n=n())%>%
   mutate(prop=n/sum(n))
 #> `summarise()` ungrouping output (override with `.groups` argument)
-vis_col(tab,x = cut,y=prop,text = prop,
+vis_barplot(tab,x = cut,y=prop,text = prop,
         col = cut,y_title = "Percentage",
         y_include = 0.45,y_breaks = scales::breaks_width(0.05),
         y_labels = function(x){scales::percent(x,accuracy = 1)})
