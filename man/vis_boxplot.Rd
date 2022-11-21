@@ -35,7 +35,9 @@ vis_boxplot(
   y_breaks = NULL,
   y_expand = NULL,
   y_include = NULL,
-  y_labels = function(x) {     return(x) },
+  y_labels = function(x) {
+     return(x)
+ },
   y_limits = NULL,
   y_sec_axis = ggplot2::waiver(),
   y_title = NULL,
