@@ -56,6 +56,8 @@
 #' @param fontsize Fontsize of the entire plot
 #' @param labels Boolean whether to show labels with quantile statistics 
 #' @param labelsize Size of the labels. By default a function of the overall fontsize, but it can be set separately.
+#' @param label_repel bool to indicate whether to use _label_repel
+#' @param label_nudge_x Amount of nudging of the labels
 #' @param theme A ggplot2 theme.
 #' @return A ggplot object.
 #' @export
@@ -119,6 +121,8 @@ vis_boxplot <- function(
     fontsize = 18,
     labels = TRUE,
     labelsize = NULL,
+    label_repel=T,
+    label_nudge_x=0.5,
     theme = NULL) {
   
   #quote
@@ -130,6 +134,8 @@ vis_boxplot <- function(
   group <- rlang::enquo(group)
   text <- rlang::enquo(text)
   
+  #Initialize col_n with 1
+  col_n<-1
   #stop, warn or message
   if (rlang::is_null(data)) rlang::abort("data is required.")
   if (rlang::is_null(titles)) rlang::inform(c("i" = "{ggblanket} converts unspecified titles using snakecase::to_sentence_case."))
@@ -220,9 +226,9 @@ vis_boxplot <- function(
     else
       width <- 0.5
   }
-  if(labels==T){
-    width <- 0.1
-  }
+  # if(labels==T){
+  #   width <- 0.1
+  # }
   if (rlang::is_null(coord)) coord <- ggplot2::coord_cartesian(clip = "off")
   
   ###process plot data
@@ -253,7 +259,6 @@ vis_boxplot <- function(
   }
   
   if (!rlang::quo_is_null(col)) {
-    
     if (is.logical(rlang::eval_tidy(col, data))) {
       data <- data %>%
         dplyr::mutate(dplyr::across(!!col, ~ factor(.x, levels = c("FALSE", "TRUE"))))
@@ -284,7 +289,6 @@ vis_boxplot <- function(
   if (rlang::quo_is_null(col)) {
     if (rlang::is_null(pal)) {
       pal <- pal_tableau(col_n)
-      print(pal)
     } else {
       pal <- pal[1]
     }
@@ -970,18 +974,77 @@ vis_boxplot <- function(
       ggplot2::theme(legend.position = "right")
   }
   if(labels==T){
+    get_stats <- function(x){
+      return(tibble(stats=c("min","q25","q50","q75","max"),
+                    value=boxplot.stats(x)$stats))
+    }
+    
+    
+    #If there is only one outcome variable
+    if( rlang::quo_is_null(y)| rlang::quo_is_null(x)){
+      if(!rlang::quo_is_null(x)){
+        stop("If there is only one category please use the y aesthetic!")
+      }
+      
+      if(rlang::quo_is_null(y)){
+        outcome <- quo_name(x)
+      } else {
+        outcome <- quo_name(y)
+      }
+      
+      stats <- get_stats(data[[outcome]])
+      
+    } else {
+      categorical_vars <- unique(c(quo_name(col),quo_name(x)))
+      categorical_vars<-categorical_vars[categorical_vars!="NULL"]
+      categorical_exprs<-map(categorical_vars,~parse_expr(.x))
+      stats<-data%>%
+        group_by(!!!categorical_exprs)%>%
+        summarise(stats=!!parse_expr(
+          glue("list(get_stats({quo_name(y)}))")
+        ))%>%unnest(cols = c(stats))
+      
+    }
+    
     #Obtain placement information for summary statistics:
-    gg <- plot+stat_summary(geom = "label", fun = quantile,
-                            aes(label = ..y.., x = !!x),position = position_nudge(x=0.2))
+    if(label_repel==T & rlang::quo_is_null(x)){
+      plot<-plot+
+        geom_label_repel(aes(label=y_labels(value),y=value,x=0),data=stats,fill=I("white"),
+                         show.legend = F,nudge_x = label_nudge_x,
+                         size=ifelse(is.null(labelsize),fontsize/4.5,labelsize))+
+        scale_x_discrete(labels = NULL, breaks = NULL)
+    } else if(label_repel==T & !rlang::quo_is_null(x)){
+      plot<-plot+
+        geom_label_repel(aes(label=y_labels(value),y=value),data=stats,fill=I("white"),
+                         show.legend = F,nudge_x = label_nudge_x,
+                         size=ifelse(is.null(labelsize),fontsize/4.5,labelsize))
+    } else if(label_repel==F & rlang::quo_is_null(x)){
+      plot<-plot+
+        geom_label(aes(label=y_labels(value),y=value,x=0),data=stats,fill=I("white"),
+                   show.legend = F,      position = position_nudge(x=label_nudge_x),
+                   size=ifelse(is.null(labelsize),fontsize/4.5,labelsize))+
+        scale_x_discrete(labels = NULL, breaks = NULL)
+      
+    } else if(label_repel==F & !rlang::quo_is_null(x)){
+      plot<-plot+
+        geom_label(aes(label=y_labels(value),y=value),data=stats,fill=I("white"),
+                   show.legend = F,      position = position_nudge(x=label_nudge_x),
+                   size=ifelse(is.null(labelsize),fontsize/4.5,labelsize))
+    }
     
-    stat_data<-ggplot_build(gg)$data[[2]]
     
-    plot <- plot+
-      geom_linerange(aes(xmin=group,xmax=x,y=y),data = stat_data,inherit.aes = F)+
-      geom_label(aes(label=y_labels(y),y=y,x=x,col="white"),
-                 data = stat_data,show.legend = F,inherit.aes = F,
-                 color="black",
-                 size=ifelse(is.null(labelsize),fontsize/4.5,labelsize))
+    #prep_pivot_table(df = data,)
+    # gg <- plot+stat_summary(geom = "label", fun = quantile,
+    #                         aes(label = ..y.., x = !!x),position = position_nudge(x=0.2))
+    # 
+    # stat_data<-ggplot_build(gg)$data[[2]]
+    # 
+    # plot <- plot+
+    #   geom_linerange(aes(xmin=group,xmax=x,y=y),data = stat_data,inherit.aes = F)+
+    #   geom_label(aes(label=y_labels(y),y=y,x=x,col="white"),
+    #              data = stat_data,show.legend = F,inherit.aes = F,
+    #              color="black",
+    #              size=ifelse(is.null(labelsize),fontsize/4.5,labelsize))
     
     
   }

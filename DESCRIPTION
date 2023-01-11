@@ -29,4 +29,5 @@ Depends:
     glue,
     rclipboard,
     colorspace,
-    colourpicker
+    colourpicker,
+    ggrepel

@@ -62,6 +62,8 @@ vis_boxplot(
   fontsize = 18,
   labels = TRUE,
   labelsize = NULL,
+  label_repel = T,
+  label_nudge_x = 0.5,
   theme = NULL
 )
 }
@@ -175,6 +177,10 @@ vis_boxplot(
 \item{labels}{Boolean whether to show labels with quantile statistics}
 
 \item{labelsize}{Size of the labels. By default a function of the overall fontsize, but it can be set separately.}
+
+\item{label_repel}{bool to indicate whether to use _label_repel}
+
+\item{label_nudge_x}{Amount of nudging of the labels}
 
 \item{theme}{A ggplot2 theme.}
 }

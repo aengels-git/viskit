@@ -62,6 +62,8 @@ vis_boxplot_filter(
   fontsize = 18,
   labels = TRUE,
   labelsize = NULL,
+  label_repel = T,
+  label_nudge_x = 0.5,
   theme = NULL,
   filter_var = NULL
 )
