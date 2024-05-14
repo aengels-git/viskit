@@ -1,5 +1,27 @@
 #' @title Bar ggplot.
 #'
+#' @description Create a ranked bar plot 
+#' @param data A data frame or tibble.
+#' @param x Unquoted x aesthetic variable.
+#' @param y Unquoted y aesthetic variable, used for sorting
+#' @param descending boolean to indicate whether to sort values in descending order
+#' @return A ggplot object.
+#' 
+#' @export
+vis_ranked_barplot<-function(data, x, y,descending = TRUE, ...){
+  x <- deparse(substitute(x))
+  y <- deparse(substitute(y))
+  
+  data <- data%>%
+    mutate(!!parse_expr(x) := fct_reorder(!!parse_expr(x), !!parse_expr(y),.desc=descending))
+  
+  vis_barplot(data = data, x=!!parse_expr(x),y=!!parse_expr(y),...)
+}
+
+
+
+#' @title Bar ggplot.
+#'
 #' @description Create a bar plot with a wrapper around the ggplot2::geom_bar function.
 #' @param data A data frame or tibble.
 #' @param x Unquoted x aesthetic variable.
